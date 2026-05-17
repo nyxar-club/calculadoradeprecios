@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nyxar — Calculadora de Precios</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
+  <style>
+    /* ─── TOKENS ─────────────────────────────────────── */
+    :root {
+      --accent:       #7C3AED;
+      --accent-dim:   #4C1D95;
+      --amber:        #E8811A;
+      --amber-dim:    #92400E;
+      --green:        #16a34a;
+      --red:          #dc2626;
+
+      --bg:           #0f0f0f;
+      --bg-2:         #1a1a1a;
+      --bg-3:         #242424;
+      --border:       rgba(255,255,255,0.08);
+      --border-2:     rgba(255,255,255,0.15);
+
+      --text:         #f0f0f0;
+      --text-2:       #a0a0a0;
+      --text-3:       #606060;
+
+      --radius:       10px;
+      --radius-lg:    14px;
+    }
+
+    /* ─── RESET ─────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 16px; scroll-behavior: smooth; }
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 0 0 4rem 0;
+    }
+
+    /* ─── HEADER ─────────────────────────────────────── */
+    .top-bar {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(15,15,15,0.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 0.5px solid var(--border);
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .logo {
+      font-family: 'Space Mono', monospace;
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      color: var(--text);
+    }
+    .logo span { color: var(--accent); }
+    .version-badge {
+      font-size: 11px;
+      background: var(--bg-3);
+      border: 0.5px solid var(--border-2);
+      border-radius: 999px;
+      padding: 3px 10px;
+      color: var(--text-2);
+      font-family: 'Space Mono', monospace;
+    }
+
+    /* ─── LAYOUT ─────────────────────────────────────── */
+    .container {
+      max-width: 680px;
+      margin: 0 auto;
+      padding: 24px 16px;
+    }
+
+    /* ─── SECTION LABEL ─────────────────────────────── */
+    .section-label {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-3);
+      margin-bottom: 10px;
+      padding-left: 2px;
+    }
+
+    /* ─── DIVIDER ────────────────────────────────────── */
+    .divider { height: 0.5px; background: var(--border); margin: 24px 0; }
+
+    /* ─── CARD ───────────────────────────────────────── */
+    .card {
+      background: var(--bg-2);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 16px 18px;
+    }
+    .card.accent-border { border-color: var(--accent); border-width: 1.5px; }
+    .card.amber-border  { border-color: var(--amber);  border-width: 1.5px; }
+
+    /* ─── SHIRT SELECTOR ─────────────────────────────── */
+    .shirt-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+    @media (max-width: 420px) {
+      .shirt-grid { grid-template-columns: 1fr 1fr; }
+    }
+    .shirt-btn {
+      background: var(--bg-2);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 10px;
+      cursor: pointer;
+      text-align: left;
+      transition: border 0.15s, background 0.15s;
+      color: var(--text);
+    }
+    .shirt-btn:hover { border-color: var(--border-2); background: var(--bg-3); }
+    .shirt-btn.active {
+      border: 2px solid var(--accent);
+      background: rgba(124,58,237,0.07);
+    }
+    .shirt-name { font-size: 14px; font-weight: 500; display: block; margin-bottom: 4px; }
+    .shirt-cost { font-size: 12px; color: var(--text-2); display: block; }
+
+    /* ─── CUSTOM PRICE TOGGLE ────────────────────────── */
+    .custom-toggle-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 11px 14px;
+      background: var(--bg-2);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius);
+      cursor: pointer;
+      user-select: none;
+      transition: border 0.15s;
+      margin-bottom: 10px;
+    }
+    .custom-toggle-row.active { border: 1.5px solid var(--accent); background: rgba(124,58,237,0.07); }
+    .custom-toggle-row .label { font-size: 13px; color: var(--text-2); flex: 1; }
+    .custom-toggle-row.active .label { color: var(--text); }
+    .custom-price-input { margin-bottom: 10px; display: none; }
+    .custom-price-input.visible { display: block; }
+
+    /* ─── PILL TOGGLE ────────────────────────────────── */
+    .pill-toggle {
+      width: 36px;
+      height: 20px;
+      border-radius: 999px;
+      background: var(--bg-3);
+      border: 0.5px solid var(--border-2);
+      position: relative;
+      transition: background 0.2s, border 0.2s;
+      flex-shrink: 0;
+    }
+    .pill-toggle.on { background: var(--accent); border-color: var(--accent); }
+    .pill-toggle.amber.on { background: var(--amber); border-color: var(--amber); }
+    .pill-toggle-dot {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: white;
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      transition: left 0.2s;
+    }
+    .pill-toggle.on .pill-toggle-dot { left: 19px; }
+
+    /* ─── DTF ────────────────────────────────────────── */
+    .dtf-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    @media (max-width: 420px) { .dtf-grid { grid-template-columns: 1fr; } }
+    .dtf-opt-row { display: flex; gap: 8px; margin-top: 10px; }
+    .dtf-opt {
+      flex: 1;
+      padding: 8px;
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--bg-3);
+      font-size: 12px;
+      cursor: pointer;
+      text-align: center;
+      color: var(--text-2);
+      font-family: 'DM Sans', sans-serif;
+      transition: all 0.12s;
+    }
+    .dtf-opt:hover { border-color: var(--border-2); }
+    .dtf-opt.active { border: 1.5px solid var(--accent); color: var(--accent); font-weight: 500; background: rgba(124,58,237,0.08); }
+    .dtf-ref {
+      background: var(--bg-3);
+      border-radius: var(--radius);
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 6px;
+    }
+    .dtf-ref-line { font-size: 12px; color: var(--text-2); }
+    .dtf-ref-line span { color: var(--text); font-weight: 500; }
+    .dtf-cost-display {
+      font-size: 12px;
+      color: var(--text-2);
+      padding: 7px 10px;
+      background: var(--bg-3);
+      border-radius: var(--radius);
+      margin-top: 10px;
+    }
+    .dtf-cost-display strong { color: var(--accent); }
+
+    /* ─── INPUTS ─────────────────────────────────────── */
+    label.field-label { font-size: 12px; color: var(--text-2); display: block; margin-bottom: 6px; }
+    input[type="number"],
+    input[type="text"] {
+      width: 100%;
+      background: var(--bg-3);
+      border: 0.5px solid var(--border-2);
+      border-radius: var(--radius);
+      padding: 10px 12px;
+      font-size: 14px;
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      outline: none;
+      transition: border 0.15s;
+    }
+    input[type="number"]:focus,
+    input[type="text"]:focus { border-color: var(--accent); }
+    input[type="number"]::-webkit-outer-spin-button,
+    input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
+
+    /* ─── EXTRAS ─────────────────────────────────────── */
+    .extras-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 4px;
+    }
+    @media (max-width: 380px) { .extras-grid { grid-template-columns: 1fr; } }
+    .extra-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 11px 12px;
+      background: var(--bg-2);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius);
+      cursor: pointer;
+      user-select: none;
+      transition: border 0.12s, background 0.12s;
+    }
+    .extra-item:hover { border-color: var(--border-2); }
+    .extra-item.active {
+      border: 1.5px solid var(--accent);
+      background: rgba(124,58,237,0.07);
+    }
+    .check-circle {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      border: 1.5px solid var(--border-2);
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.12s;
+      font-size: 11px;
+    }
+    .extra-item.active .check-circle {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: white;
+    }
+    .extra-label { font-size: 13px; color: var(--text-2); flex: 1; line-height: 1.3; }
+    .extra-item.active .extra-label { color: var(--text); }
+    .extra-price-tag { font-size: 12px; color: var(--text-3); font-family: 'Space Mono', monospace; }
+    .extra-item.active .extra-price-tag { color: var(--accent); }
+
+    /* ─── FIXED COSTS LIST ───────────────────────────── */
+    .fixed-list { display: flex; flex-direction: column; gap: 6px; }
+    .fixed-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+    }
+    .fixed-row .fl { color: var(--text-2); }
+    .fixed-row .fr { color: var(--text); font-family: 'Space Mono', monospace; font-size: 12px; }
+
+    /* ─── WOMPI ROW ──────────────────────────────────── */
+    .wompi-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 14px;
+      background: var(--bg-2);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius);
+      cursor: pointer;
+      user-select: none;
+      transition: border 0.15s;
+    }
+    .wompi-row.active { border: 1.5px solid var(--amber); background: rgba(232,129,26,0.06); }
+    .wompi-info { flex: 1; }
+    .wompi-title { font-size: 13px; font-weight: 500; color: var(--text); }
+    .wompi-sub { font-size: 11px; color: var(--text-2); margin-top: 2px; }
+
+    /* ─── SUMMARY ────────────────────────────────────── */
+    .summary-card {
+      background: var(--bg-2);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 18px;
+    }
+    .summary-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 0;
+      border-bottom: 0.5px solid var(--border);
+      font-size: 13px;
+    }
+    .summary-row:last-of-type { border-bottom: none; }
+    .summary-row .sr-label { color: var(--text-2); }
+    .summary-row .sr-val {
+      color: var(--text);
+      font-family: 'Space Mono', monospace;
+      font-size: 12px;
+    }
+    .summary-row .sr-val.accent { color: var(--accent); }
+    .summary-row .sr-val.amber  { color: var(--amber); }
+    .summary-total {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      padding-top: 14px;
+      margin-top: 14px;
+      border-top: 1px solid var(--border-2);
+    }
+    .st-label { font-size: 13px; color: var(--text-2); }
+    .st-price {
+      font-size: 34px;
+      font-weight: 700;
+      color: var(--accent);
+      font-family: 'Space Mono', monospace;
+    }
+
+    /* ─── METRICS ────────────────────────────────────── */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+    }
+    .metric {
+      background: var(--bg-2);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px;
+    }
+    .metric-label { font-size: 11px; color: var(--text-3); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.06em; }
+    .metric-val { font-size: 22px; font-weight: 600; font-family: 'Space Mono', monospace; }
+    .metric-val.col-default { color: var(--text); }
+    .metric-val.col-accent  { color: var(--accent); }
+    .metric-val.col-amber   { color: var(--amber); }
+    .metric-val.col-green   { color: var(--green); }
+
+    /* ─── ADD TO CATALOG ─────────────────────────────── */
+    .name-row { display: flex; gap: 10px; }
+    .name-row input { flex: 1; }
+    .btn-add {
+      background: var(--accent);
+      border: none;
+      border-radius: var(--radius);
+      padding: 10px 16px;
+      color: white;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      font-family: 'DM Sans', sans-serif;
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: opacity 0.15s;
+    }
+    .btn-add:hover { opacity: 0.88; }
+
+    /* ─── CATALOG ────────────────────────────────────── */
+    .catalog-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+    .btn-clear { font-size: 12px; color: var(--text-3); background: none; border: none; cursor: pointer; font-family: 'DM Sans', sans-serif; }
+    .btn-clear:hover { color: var(--red); }
+    .catalog-wrap { overflow-x: auto; border-radius: var(--radius-lg); border: 0.5px solid var(--border); }
+    table { width: 100%; border-collapse: collapse; min-width: 460px; }
+    thead tr { background: var(--bg-3); }
+    th {
+      text-align: left;
+      padding: 10px 12px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-3);
+      white-space: nowrap;
+    }
+    td { padding: 10px 12px; border-top: 0.5px solid var(--border); font-size: 13px; color: var(--text); }
+    tr:hover td { background: var(--bg-3); }
+    .pill-type {
+      display: inline-block;
+      font-size: 10px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: rgba(124,58,237,0.15);
+      color: #a78bfa;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+    }
+    .td-price { color: var(--accent); font-family: 'Space Mono', monospace; font-weight: 700; }
+    .td-margin { color: var(--amber); font-family: 'Space Mono', monospace; }
+    .btn-del {
+      background: none;
+      border: none;
+      color: var(--text-3);
+      cursor: pointer;
+      font-size: 16px;
+      padding: 4px 6px;
+      border-radius: 6px;
+      transition: color 0.12s, background 0.12s;
+    }
+    .btn-del:hover { color: var(--red); background: rgba(220,38,38,0.1); }
+    .empty-state {
+      text-align: center;
+      padding: 32px 16px;
+      color: var(--text-3);
+      font-size: 13px;
+    }
+
+    /* ─── SPACING HELPERS ────────────────────────────── */
+    .mb8  { margin-bottom: 8px; }
+    .mb12 { margin-bottom: 12px; }
+    .mb16 { margin-bottom: 16px; }
+    .mb24 { margin-bottom: 24px; }
+
+    /* ─── SCROLLBAR ──────────────────────────────────── */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--bg-3); border-radius: 3px; }
+  </style>
+</head>
+<body>
+
+  <!-- TOP BAR -->
+  <div class="top-bar">
+    <span class="logo">NYX<span>AR</span></span>
+    <span class="version-badge">calculadora v1.0</span>
+  </div>
+
+  <div class="container">
+
+    <!-- ─── TIPO DE CAMISA ──────────────────────────── -->
+    <div class="section-label mb10">tipo de camisa</div>
+    <div class="shirt-grid mb8">
+      <button class="shirt-btn active" data-type="Regular" data-cost="4" onclick="selectShirt(this)">
+        <span class="shirt-name">Regular</span>
+        <span class="shirt-cost">$4.00 base</span>
+      </button>
+      <button class="shirt-btn" data-type="Oversize" data-cost="5" onclick="selectShirt(this)">
+        <span class="shirt-name">Oversize</span>
+        <span class="shirt-cost">$5.00 base</span>
+      </button>
+      <button class="shirt-btn" data-type="Boxy fit" data-cost="6.67" onclick="selectShirt(this)">
+        <span class="shirt-name">Boxy fit</span>
+        <span class="shirt-cost">$6.67 base</span>
+      </button>
+    </div>
+
+    <!-- PRECIO PERSONALIZADO TOGGLE -->
+    <div class="custom-toggle-row mb12" id="custom-toggle" onclick="toggleCustomPrice()">
+      <div class="pill-toggle" id="custom-pill"><div class="pill-toggle-dot"></div></div>
+      <span class="label">Precio personalizado — activar si el costo de la camisa es diferente</span>
+    </div>
+    <div class="custom-price-input mb16" id="custom-price-block">
+      <label class="field-label">Costo real de la camisa ($)</label>
+      <input type="number" id="custom-price-val" value="4.00" min="0" step="0.01"
+             placeholder="Ej: 7.50" oninput="calc()">
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- ─── DTF ──────────────────────────────────────── -->
+    <div class="section-label mb10">dtf — estampado</div>
+    <div class="dtf-grid mb4">
+      <div class="card" style="padding:14px;">
+        <label class="field-label">cm² de diseño</label>
+        <input type="number" id="dtf-cm2" value="0" min="0" step="1" oninput="calcDTF()">
+        <div class="dtf-opt-row">
+          <!-- ==== PRECIO DTF: editar aquí si cambia ==== -->
+          <button class="dtf-opt active" data-price="11.75" onclick="selectDTF(this)">½ metro — $11.75</button>
+          <button class="dtf-opt" data-price="18.75" onclick="selectDTF(this)">1 metro — $18.75</button>
+        </div>
+        <div class="dtf-cost-display" id="dtf-display">Costo DTF: <strong>$0.00</strong></div>
+      </div>
+      <div class="dtf-ref">
+        <div class="dtf-ref-line">½ metro = <span>5,000 cm²</span></div>
+        <div class="dtf-ref-line">1 metro = <span>10,000 cm²</span></div>
+        <div class="dtf-ref-line" style="margin-top:6px;font-size:11px;color:var(--text-3);">precio proporcional<br>al área real usada</div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- ─── ACCESORIOS OPCIONALES ─────────────────────── -->
+    <div class="section-label mb10">accesorios y empaque <span style="font-size:9px;color:var(--text-3);letter-spacing:0;">(opcionales — activá los que apliquen)</span></div>
+    <div class="extras-grid mb8" id="extras-grid">
+      <!-- ==== PRECIOS EXTRAS: editar data-cost si cambian ==== -->
+      <div class="extra-item" data-cost="0.40" data-name="Anillo" onclick="toggleExtra(this)">
+        <div class="check-circle"><i class="ti ti-check" style="font-size:10px;"></i></div>
+        <span class="extra-label">Anillo</span>
+        <span class="extra-price-tag">$0.40</span>
+      </div>
+      <div class="extra-item" data-cost="0.52" data-name="Pulsera dorada" onclick="toggleExtra(this)">
+        <div class="check-circle"><i class="ti ti-check" style="font-size:10px;"></i></div>
+        <span class="extra-label">Pulsera dorada</span>
+        <span class="extra-price-tag">$0.52</span>
+      </div>
+      <div class="extra-item" data-cost="0.30" data-name="Pulsera plateada" onclick="toggleExtra(this)">
+        <div class="check-circle"><i class="ti ti-check" style="font-size:10px;"></i></div>
+        <span class="extra-label">Pulsera plateada</span>
+        <span class="extra-price-tag">$0.30</span>
+      </div>
+      <div class="extra-item active" data-cost="0.58" data-name="Caja de collar" onclick="toggleExtra(this)">
+        <div class="check-circle"><i class="ti ti-check" style="font-size:10px;"></i></div>
+        <span class="extra-label">Caja de collar</span>
+        <span class="extra-price-tag">$0.58</span>
+      </div>
+      <div class="extra-item active" data-cost="0.33" data-name="Caja de anillo" onclick="toggleExtra(this)">
+        <div class="check-circle"><i class="ti ti-check" style="font-size:10px;"></i></div>
+        <span class="extra-label">Caja de anillo</span>
+        <span class="extra-price-tag">$0.33</span>
+      </div>
+      <div class="extra-item active" data-cost="1.71" data-name="Caja de camisa" onclick="toggleExtra(this)">
+        <div class="check-circle"><i class="ti ti-check" style="font-size:10px;"></i></div>
+        <span class="extra-label">Caja de camisa <span style="font-size:10px;color:var(--text-3);">15×25×4</span></span>
+        <span class="extra-price-tag">$1.71</span>
+      </div>
+      <div class="extra-item active" data-cost="0.43" data-name="Bolsa para camisa" onclick="toggleExtra(this)">
+        <div class="check-circle"><i class="ti ti-check" style="font-size:10px;"></i></div>
+        <span class="extra-label">Bolsa para camisa</span>
+        <span class="extra-price-tag">$0.43</span>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- ─── COSTOS FIJOS ──────────────────────────────── -->
+    <div class="section-label mb10">costos fijos — siempre incluidos</div>
+    <div class="card mb24">
+      <div class="fixed-list">
+        <!-- ==== COSTOS FIJOS: editar valores aquí si cambian ==== -->
+        <div class="fixed-row"><span class="fl">Etiqueta de prenda</span><span class="fr">$0.08</span></div>
+        <div class="fixed-row"><span class="fl">Etiqueta extra</span><span class="fr">$0.08</span></div>
+        <div class="fixed-row"><span class="fl">Tarjeta de gracias</span><span class="fr">$0.08</span></div>
+        <div class="fixed-row"><span class="fl">Tarjeta compra frecuente</span><span class="fr">$0.08</span></div>
+        <div class="fixed-row" style="padding-top:8px;border-top:0.5px solid var(--border);margin-top:6px;">
+          <span class="fl">Envío</span>
+          <!-- ==== ENVÍO: editar aquí si cambia ==== -->
+          <span class="fr">$5.00</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── WOMPI ──────────────────────────────────────── -->
+    <div class="section-label mb10">pasarela de pago</div>
+    <div class="wompi-row active mb24" id="wompi-row" onclick="toggleWompi()">
+      <div class="pill-toggle amber on" id="wompi-pill"><div class="pill-toggle-dot"></div></div>
+      <div class="wompi-info">
+        <div class="wompi-title">Incluir comisión Wompi</div>
+        <div class="wompi-sub">3.99% + IVA ≈ 4.47% sobre el precio de venta — se absorbe en el precio</div>
+      </div>
+    </div>
+
+    <!-- ─── DESGLOSE ───────────────────────────────────── -->
+    <div class="section-label mb10">desglose de costos</div>
+    <div class="summary-card mb16">
+      <div class="summary-row">
+        <span class="sr-label">Camisa base</span>
+        <span class="sr-val" id="s-shirt">$4.00</span>
+      </div>
+      <div class="summary-row">
+        <span class="sr-label">DTF estampado</span>
+        <span class="sr-val" id="s-dtf">$0.00</span>
+      </div>
+      <div class="summary-row">
+        <span class="sr-label">Empaque fijo (etiquetas + tarjetas)</span>
+        <!-- ==== FIJO CALCULADO: 0.08×4 = 0.32 ==== -->
+        <span class="sr-val">$0.32</span>
+      </div>
+      <div class="summary-row">
+        <span class="sr-label">Extras opcionales</span>
+        <span class="sr-val" id="s-extras">$3.05</span>
+      </div>
+      <div class="summary-row">
+        <span class="sr-label">Envío</span>
+        <span class="sr-val">$5.00</span>
+      </div>
+      <div class="summary-row">
+        <span class="sr-label">Ganancia fija</span>
+        <!-- ==== GANANCIA OBJETIVO: editar aquí si cambia ==== -->
+        <span class="sr-val accent">$9.00</span>
+      </div>
+      <div class="summary-row" id="wompi-summary-row">
+        <span class="sr-label" id="wompi-row-label">Wompi (~4.47% sobre venta)</span>
+        <span class="sr-val amber" id="s-wompi">$0.00</span>
+      </div>
+      <div class="summary-total">
+        <div>
+          <div class="st-label">Precio de venta sugerido</div>
+          <div style="font-size:11px;color:var(--text-3);margin-top:2px;" id="wompi-note">Wompi incluido — vos recibís $9.00 netos</div>
+        </div>
+        <div class="st-price" id="total-price">$00.00</div>
+      </div>
+    </div>
+
+    <!-- ─── MÉTRICAS ──────────────────────────────────── -->
+    <div class="metrics-grid mb24">
+      <div class="metric">
+        <div class="metric-label">costo total</div>
+        <div class="metric-val col-default" id="m-cost">$0.00</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">ganancia neta</div>
+        <div class="metric-val col-accent">$9.00</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">margen %</div>
+        <div class="metric-val col-amber" id="m-margin">—</div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- ─── AGREGAR AL CATÁLOGO ───────────────────────── -->
+    <div class="section-label mb10">agregar al catálogo</div>
+    <div class="name-row mb24">
+      <input type="text" id="item-name" placeholder="Nombre de la prenda — ej: Drop 01 Boxy Noir">
+      <button class="btn-add" onclick="addToCatalog()">
+        <i class="ti ti-plus"></i> Agregar
+      </button>
+    </div>
+
+    <!-- ─── CATÁLOGO ──────────────────────────────────── -->
+    <div id="catalog-section" style="display:none;">
+      <div class="catalog-header">
+        <div class="section-label" style="margin:0;">catálogo</div>
+        <button class="btn-clear" onclick="clearCatalog()">
+          <i class="ti ti-trash" style="font-size:13px;vertical-align:-2px;margin-right:3px;"></i>limpiar todo
+        </button>
+      </div>
+      <div class="catalog-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Prenda</th>
+              <th>Tipo</th>
+              <th>Costo</th>
+              <th>Venta</th>
+              <th>Margen</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="catalog-body">
+            <tr><td colspan="6" class="empty-state">Aún no hay prendas en el catálogo</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div><!-- /container -->
+
+  <script>
+    /* =====================================================
+       NYXAR — CALCULADORA DE PRECIOS v1.0
+       ─────────────────────────────────────────────────────
+       Para modificar costos en el futuro:
+         • Camisa base:     editar data-cost en .shirt-btn
+         • DTF precios:     editar data-price en .dtf-opt
+         • Extras:          editar data-cost en .extra-item
+         • Empaque fijo:    editar FIXED_PKG abajo
+         • Envío:           editar SHIPPING abajo
+         • Ganancia:        editar PROFIT abajo
+         • Wompi rate:      editar WOMPI_RATE abajo
+    ===================================================== */
+
+    /* ==== CONFIGURACIÓN CENTRAL ==== */
+    const FIXED_PKG  = 0.08 + 0.08 + 0.08 + 0.08;   // 4 etiquetas/tarjetas
+    const SHIPPING   = 5.00;
+    const PROFIT     = 9.00;
+    const WOMPI_RATE = 0.0447;                         // 3.99% + IVA ≈ 4.47%
+    const DTF_AREAS  = { 11.75: 5000, 18.75: 10000 };
+
+    /* ==== ESTADO ==== */
+    let S = {
+      shirtCost:   4,
+      shirtType:   'Regular',
+      customActive: false,
+      dtfCm2:      0,
+      dtfPrice:    11.75,
+      dtfCost:     0,
+      extras:      0,
+      wompi:       true,
+      catalog:     [],
+      _sale:       0,
+      _totalCost:  0,
+      _margin:     0,
+    };
+
+    /* Inicializar extras activos al cargar */
+    window.addEventListener('DOMContentLoaded', () => {
+      let t = 0;
+      document.querySelectorAll('.extra-item.active').forEach(e => {
+        t += parseFloat(e.dataset.cost);
+      });
+      S.extras = t;
+      calc();
+    });
+
+    /* ─── SELECCIÓN DE CAMISA ────────────────────────── */
+    function selectShirt(btn) {
+      document.querySelectorAll('.shirt-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      S.shirtType = btn.dataset.type;
+      S.shirtCost = parseFloat(btn.dataset.cost);
+      if (!S.customActive) calc();
+    }
+
+    /* ─── PRECIO PERSONALIZADO ───────────────────────── */
+    function toggleCustomPrice() {
+      S.customActive = !S.customActive;
+      const pill  = document.getElementById('custom-pill');
+      const block = document.getElementById('custom-price-block');
+      const row   = document.getElementById('custom-toggle');
+      if (S.customActive) {
+        pill.classList.add('on');
+        block.classList.add('visible');
+        row.classList.add('active');
+        document.getElementById('custom-price-val').value = S.shirtCost.toFixed(2);
+        document.querySelectorAll('.shirt-btn').forEach(b => b.disabled = true);
+        document.querySelectorAll('.shirt-btn').forEach(b => b.style.opacity = '0.4');
+      } else {
+        pill.classList.remove('on');
+        block.classList.remove('visible');
+        row.classList.remove('active');
+        document.querySelectorAll('.shirt-btn').forEach(b => { b.disabled = false; b.style.opacity = '1'; });
+        const active = document.querySelector('.shirt-btn.active');
+        if (active) S.shirtCost = parseFloat(active.dataset.cost);
+      }
+      calc();
+    }
+
+    /* ─── DTF ────────────────────────────────────────── */
+    function calcDTF() {
+      const cm2 = parseFloat(document.getElementById('dtf-cm2').value) || 0;
+      S.dtfCm2  = cm2;
+      const maxArea = DTF_AREAS[S.dtfPrice] || 5000;
+      S.dtfCost = cm2 > 0 ? (cm2 / maxArea) * S.dtfPrice : 0;
+      document.getElementById('dtf-display').innerHTML =
+        'Costo DTF: <strong>$' + S.dtfCost.toFixed(2) + '</strong>';
+      calc();
+    }
+
+    function selectDTF(btn) {
+      document.querySelectorAll('.dtf-opt').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      S.dtfPrice = parseFloat(btn.dataset.price);
+      calcDTF();
+    }
+
+    /* ─── EXTRAS ─────────────────────────────────────── */
+    function toggleExtra(el) {
+      el.classList.toggle('active');
+      let total = 0;
+      document.querySelectorAll('.extra-item.active').forEach(e => {
+        total += parseFloat(e.dataset.cost);
+      });
+      S.extras = total;
+      calc();
+    }
+
+    /* ─── WOMPI ──────────────────────────────────────── */
+    function toggleWompi() {
+      S.wompi = !S.wompi;
+      const pill = document.getElementById('wompi-pill');
+      const row  = document.getElementById('wompi-row');
+      if (S.wompi) {
+        pill.classList.add('on');
+        row.classList.add('active');
+      } else {
+        pill.classList.remove('on');
+        row.classList.remove('active');
+      }
+      calc();
+    }
+
+    /* ─── CÁLCULO PRINCIPAL ──────────────────────────── */
+    function calc() {
+      /* Obtener costo de camisa */
+      let shirtCost = S.shirtCost;
+      if (S.customActive) {
+        shirtCost = parseFloat(document.getElementById('custom-price-val').value) || 0;
+      }
+
+      const baseCost = shirtCost + S.dtfCost + FIXED_PKG + S.extras + SHIPPING;
+      let salePrice, wompiAmt;
+
+      if (S.wompi) {
+        /* Precio se construye hacia arriba para que la ganancia sea exacta después de la comisión */
+        salePrice = (baseCost + PROFIT) / (1 - WOMPI_RATE);
+        wompiAmt  = salePrice * WOMPI_RATE;
+      } else {
+        salePrice = baseCost + PROFIT;
+        wompiAmt  = 0;
+      }
+
+      const totalCost = baseCost + wompiAmt;
+      const margin    = (PROFIT / salePrice) * 100;
+
+      S._sale      = salePrice;
+      S._totalCost = totalCost;
+      S._margin    = margin;
+
+      /* — Actualizar UI — */
+      setText('s-shirt',     '$' + shirtCost.toFixed(2));
+      setText('s-dtf',       '$' + S.dtfCost.toFixed(2));
+      setText('s-extras',    '$' + S.extras.toFixed(2));
+      setText('s-wompi',     S.wompi ? '$' + wompiAmt.toFixed(2) : '—');
+      setText('wompi-row-label', S.wompi ? 'Wompi (~4.47% sobre venta)' : 'Wompi (desactivado)');
+      setText('total-price', '$' + salePrice.toFixed(2));
+      setText('m-cost',      '$' + totalCost.toFixed(2));
+      setText('m-margin',    margin.toFixed(1) + '%');
+      setText('wompi-note',  S.wompi
+        ? 'Wompi incluido — vos recibís $' + PROFIT.toFixed(2) + ' netos'
+        : 'Sin pasarela — precio directo');
+    }
+
+    function setText(id, val) {
+      const el = document.getElementById(id);
+      if (el) el.textContent = val;
+    }
+
+    /* ─── CATÁLOGO ───────────────────────────────────── */
+    function addToCatalog() {
+      const name = document.getElementById('item-name').value.trim()
+                   || ('Prenda ' + (S.catalog.length + 1));
+      let shirtCost = S.shirtCost;
+      if (S.customActive) {
+        shirtCost = parseFloat(document.getElementById('custom-price-val').value) || 0;
+      }
+      const activeExtras = [];
+      document.querySelectorAll('.extra-item.active').forEach(e => activeExtras.push(e.dataset.name));
+
+      S.catalog.push({
+        id:      Date.now(),
+        name,
+        type:    S.customActive ? 'Personalizada' : S.shirtType,
+        cost:    S._totalCost,
+        price:   S._sale,
+        margin:  S._margin,
+        wompi:   S.wompi,
+        extras:  activeExtras,
+      });
+      renderCatalog();
+      document.getElementById('item-name').value = '';
+    }
+
+    function removeItem(id) {
+      S.catalog = S.catalog.filter(i => i.id !== id);
+      renderCatalog();
+    }
+
+    function clearCatalog() {
+      if (confirm('¿Limpiar todo el catálogo?')) {
+        S.catalog = [];
+        renderCatalog();
+      }
+    }
+
+    function renderCatalog() {
+      const section = document.getElementById('catalog-section');
+      const tbody   = document.getElementById('catalog-body');
+      if (S.catalog.length === 0) {
+        section.style.display = 'none';
+        tbody.innerHTML = '<tr><td colspan="6" class="empty-state">Aún no hay prendas en el catálogo</td></tr>';
+        return;
+      }
+      section.style.display = 'block';
+      tbody.innerHTML = S.catalog.map(item => `
+        <tr>
+          <td>${escHtml(item.name)}</td>
+          <td><span class="pill-type">${escHtml(item.type)}</span></td>
+          <td style="font-family:'Space Mono',monospace;font-size:12px;">$${item.cost.toFixed(2)}</td>
+          <td class="td-price">$${item.price.toFixed(2)}</td>
+          <td class="td-margin">${item.margin.toFixed(1)}%</td>
+          <td><button class="btn-del" onclick="removeItem(${item.id})" aria-label="eliminar">
+            <i class="ti ti-trash"></i></button></td>
+        </tr>
+      `).join('');
+    }
+
+    function escHtml(str) {
+      return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+  </script>
+</body>
+</html>

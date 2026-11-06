@@ -508,8 +508,24 @@
         <input type="number" id="dtf-cm2" value="0" min="0" step="1" oninput="calcDTF()">
         <div class="dtf-opt-row">
           <!-- ==== PRECIO DTF: editar aquí si cambia ==== -->
-          <button class="dtf-opt active" data-price="11.75" onclick="selectDTF(this)">½ metro — $11.75</button>
-          <button class="dtf-opt" data-price="18.75" onclick="selectDTF(this)">1 metro — $18.75</button>
+          <button class="dtf-opt active" data-price="11.75" data-area="5000" onclick="selectDTF(this)">½ metro — $11.75</button>
+          <button class="dtf-opt" data-price="18.75" data-area="10000" onclick="selectDTF(this)">1 metro — $18.75</button>
+        </div>
+
+        <!-- DTF PERSONALIZADO -->
+        <div class="custom-toggle-row" id="dtf-custom-toggle" style="margin:10px 0 0;padding:9px 12px;" onclick="toggleCustomDTF()">
+          <div class="pill-toggle" id="dtf-custom-pill"><div class="pill-toggle-dot"></div></div>
+          <span class="label" style="font-size:12px;">Precio DTF personalizado</span>
+        </div>
+        <div class="custom-price-input" id="dtf-custom-block" style="margin-top:10px;">
+          <label class="field-label">Precio que pagaste ($)</label>
+          <input type="number" id="dtf-custom-price" value="11.75" min="0" step="0.01" placeholder="Ej: 13.50" oninput="readCustomDTF()">
+          <div class="dtf-opt-row">
+            <button class="dtf-opt dtf-area-opt active" data-area="5000" onclick="selectDTFArea(this)">es de ½ metro</button>
+            <button class="dtf-opt dtf-area-opt" data-area="10000" onclick="selectDTFArea(this)">es de 1 metro</button>
+          </div>
+          <label class="field-label" style="margin-top:10px;">Área total (cm²) <span style="color:var(--text-3);">— editable</span></label>
+          <input type="number" id="dtf-custom-area" value="5000" min="1" step="1" oninput="readCustomDTF()">
         </div>
         <div class="dtf-cost-display" id="dtf-display">Costo DTF: <strong>$0.00</strong></div>
       </div>
@@ -709,7 +725,12 @@
     const SHIPPING   = 5.00;
     const PROFIT     = 9.00;
     const WOMPI_RATE = 0.0447;                         // 3.99% + IVA ≈ 4.47%
-    const DTF_AREAS  = { 11.75: 5000, 18.75: 10000 };
+    /* Área en cm² de ½ metro y 1 metro de DTF.
+       OJO: depende del ANCHO de tu rollo. Con rollo de 60 cm: ½ m = 3000 y 1 m = 6000.
+       Con los valores de abajo (5000 / 10000) se asume rollo de 100 cm de ancho.
+       Ajustalos al ancho real de tu rollo para que el costo por cm² sea exacto. */
+    const AREA_HALF = 5000;
+    const AREA_FULL = 10000;
 
     /* ==== ESTADO ==== */
     let S = {
@@ -718,6 +739,8 @@
       customActive: false,
       dtfCm2:      0,
       dtfPrice:    11.75,
+      dtfArea:     AREA_HALF,
+      dtfCustom:   false,
       dtfCost:     0,
       extras:      0,
       wompi:       true,
@@ -774,17 +797,72 @@
     function calcDTF() {
       const cm2 = parseFloat(document.getElementById('dtf-cm2').value) || 0;
       S.dtfCm2  = cm2;
-      const maxArea = DTF_AREAS[S.dtfPrice] || 5000;
-      S.dtfCost = cm2 > 0 ? (cm2 / maxArea) * S.dtfPrice : 0;
+      const area = S.dtfArea > 0 ? S.dtfArea : 1;
+      S.dtfCost = cm2 > 0 ? (cm2 / area) * S.dtfPrice : 0;
       document.getElementById('dtf-display').innerHTML =
-        'Costo DTF: <strong>$' + S.dtfCost.toFixed(2) + '</strong>';
+        'Costo DTF: <strong>$' + S.dtfCost.toFixed(2) + '</strong>' +
+        ' <span style="color:var(--text-3);">($' + (S.dtfPrice / area * 100).toFixed(2) + ' por 100 cm²)</span>';
       calc();
     }
 
+    /* Presets: ½ metro / 1 metro */
     function selectDTF(btn) {
-      document.querySelectorAll('.dtf-opt').forEach(b => b.classList.remove('active'));
+      if (S.dtfCustom) return;
+      document.querySelectorAll('.dtf-opt:not(.dtf-area-opt)').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       S.dtfPrice = parseFloat(btn.dataset.price);
+      S.dtfArea  = parseFloat(btn.dataset.area);
+      calcDTF();
+    }
+
+    /* Personalizado: activar/desactivar */
+    function toggleCustomDTF() {
+      S.dtfCustom = !S.dtfCustom;
+      const pill  = document.getElementById('dtf-custom-pill');
+      const block = document.getElementById('dtf-custom-block');
+      const row   = document.getElementById('dtf-custom-toggle');
+      const presets = document.querySelectorAll('.dtf-opt:not(.dtf-area-opt)');
+      if (S.dtfCustom) {
+        pill.classList.add('on');
+        block.classList.add('visible');
+        row.classList.add('active');
+        presets.forEach(b => b.style.opacity = '0.4');
+        document.getElementById('dtf-custom-price').value = S.dtfPrice.toFixed(2);
+        document.getElementById('dtf-custom-area').value  = S.dtfArea;
+        syncAreaButtons();
+        readCustomDTF();
+      } else {
+        pill.classList.remove('on');
+        block.classList.remove('visible');
+        row.classList.remove('active');
+        presets.forEach(b => b.style.opacity = '1');
+        const act = document.querySelector('.dtf-opt:not(.dtf-area-opt).active') ||
+                    document.querySelector('.dtf-opt:not(.dtf-area-opt)');
+        S.dtfPrice = parseFloat(act.dataset.price);
+        S.dtfArea  = parseFloat(act.dataset.area);
+        calcDTF();
+      }
+    }
+
+    /* Personalizado: elegir si el precio es de ½ metro o 1 metro */
+    function selectDTFArea(btn) {
+      document.getElementById('dtf-custom-area').value = btn.dataset.area;
+      syncAreaButtons();
+      readCustomDTF();
+    }
+
+    function syncAreaButtons() {
+      const a = parseFloat(document.getElementById('dtf-custom-area').value) || 0;
+      document.querySelectorAll('.dtf-area-opt').forEach(b =>
+        b.classList.toggle('active', parseFloat(b.dataset.area) === a));
+    }
+
+    /* Personalizado: leer precio y área escritos */
+    function readCustomDTF() {
+      if (!S.dtfCustom) return;
+      S.dtfPrice = parseFloat(document.getElementById('dtf-custom-price').value) || 0;
+      S.dtfArea  = parseFloat(document.getElementById('dtf-custom-area').value) || 0;
+      syncAreaButtons();
       calcDTF();
     }
 
